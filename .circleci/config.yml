@@ -1,0 +1,69 @@
+version: 2
+jobs:
+  deploy-prod:
+    docker:
+    - image: circleci/node:latest
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: . build/install.sh
+      - run:
+          name: Convert & Deploy
+          command: . build/deploy-prod.sh
+  retrieve-prod-changes:
+    docker:
+    - image: circleci/node:latest
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: . build/install.sh
+      - run:
+          name: Retrieve & Commit
+          command: . build/retrieve.sh
+  refresh-sandboxes:
+    docker:
+    - image: circleci/node:latest
+    steps:
+      - checkout
+      - run:
+          name: Refresh Sandboxes
+          command: . build/refresh.sh
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - deploy-prod:
+          filters:
+            branches:
+              only :
+                - master
+  scheduled-retrieve:
+    triggers:
+      - schedule:
+          cron: "15 * * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - retrieve-prod-changes:
+          filters:
+            branches:
+              only:
+                - master
+  scheduled-refresh:
+    triggers:
+      - schedule:
+          cron: "1 3-8 * * 0-5"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - refresh-sandboxes:
+          filters:
+            branches:
+              only:
+                - master
